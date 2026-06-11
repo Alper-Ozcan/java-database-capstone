@@ -1,7 +1,19 @@
 package com.project.back_end.models;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+
 @Entity
-@Table(name = "patients")
+@Table(name = "patient")
 public class Patient {
 // @Entity annotation:
 //    - Marks the class as a JPA entity, meaning it represents a table in the database.
@@ -76,9 +88,6 @@ public class Patient {
     private String address;
 
 // Constructor(s):
-    public Patient() {
-    }
-
     public Patient() {
     }
 

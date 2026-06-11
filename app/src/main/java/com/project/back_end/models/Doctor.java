@@ -1,7 +1,27 @@
 package com.project.back_end.models;
 
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 @Entity
-@Table(name = "doctors")
+@Table(name = "doctor")
 public class Doctor {
 
 // @Entity annotation:
@@ -92,7 +112,7 @@ public class Doctor {
             name = "doctor_available_times",
             joinColumns = @JoinColumn(name = "doctor_id")
     )
-    @Column(name = "time_slot")
+    @Column(name = "available_times")
     private List<String> availableTimes = new ArrayList<>();
 
 // Constructor(s):

@@ -1,7 +1,23 @@
 package com.project.back_end.models;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotNull;
+
 @Entity
-@Table(name = "appointments")
+@Table(name = "appointment")
 public class Appointment {
 
     // @Entity annotation:
@@ -98,10 +114,7 @@ public class Appointment {
     public Appointment() {
     }
 
-    public Appointment(Doctor doctor,
-            Patient patient,
-            LocalDateTime appointmentTime,
-            Integer status) {
+    public Appointment(Doctor doctor, Patient patient,LocalDateTime appointmentTime,Integer status) {
         this.doctor = doctor;
         this.patient = patient;
         this.appointmentTime = appointmentTime;

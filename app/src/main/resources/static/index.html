@@ -1,4 +1,81 @@
 <!-- index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <title>Select Role</title>
+
+    <link rel="icon" type="image/png" href="assets/images/logo/logo.png">
+
+    <link rel="stylesheet" href="assets/css/index.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <script src="js/util.js" defer></script>
+    <script src="js/render.js" defer></script>
+    <script src="js/components/header.js" defer></script>
+    <script src="js/components/footer.js" defer></script>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="wrapper">
+
+            <!-- Header -->
+            <div id="header"></div>
+
+            <!-- Main Content -->
+            <main class="main-content">
+
+                <section class="role-selection">
+
+                    <h2>Select Your Role</h2>
+
+                    <div class="role-buttons">
+                        <button id="adminBtn">Admin</button>
+                        <button id="patientBtn">Patient</button>
+                        <button id="doctorBtn">Doctor</button>
+                    </div>
+
+                </section>
+
+            </main>
+
+            <!-- Footer -->
+            <div id="footer"></div>
+
+        </div>
+
+    </div>
+
+    <!-- Modal -->
+    <div id="modalOverlay" class="modal-overlay">
+
+        <div class="modal">
+
+            <button id="closeModal" class="close-btn">
+                &times;
+            </button>
+
+            <div id="modalContent" class="modal-content">
+                <!-- Dynamic login form -->
+            </div>
+
+        </div>
+
+    </div>
+
+    <script type="module" src="js/services/index.js"></script>
+
+</body>
+
+</html>
+
+<!-- index.html -->
 <!-- 
 
 Step-by-Step Explanation of `index.html`.

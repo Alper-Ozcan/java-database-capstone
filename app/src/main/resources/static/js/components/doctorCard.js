@@ -1,3 +1,184 @@
+// doctorCard.js
+
+import { overlay } from "../loggedPatient.js";
+import { deleteDoctor } from "../services/doctorServices.js";
+import { getPatientProfile } from "../services/patientServices.js";
+
+export function createDoctorCard(doctor) {
+
+    const card = document.createElement("div");
+    card.className = "doctor-card";
+
+    const role = localStorage.getItem("userRole");
+
+    // Doctor Info
+    const doctorInfo = document.createElement("div");
+    doctorInfo.className = "doctor-info";
+
+    const doctorName = document.createElement("h3");
+    doctorName.textContent = doctor.name;
+
+    const doctorSpecialization = document.createElement("p");
+    doctorSpecialization.textContent =
+        `Specialty: ${doctor.specialization}`;
+
+    const doctorEmail = document.createElement("p");
+    doctorEmail.textContent =
+        `Email: ${doctor.email}`;
+
+    const doctorAvailability = document.createElement("p");
+
+    if (
+        doctor.availableAppointments &&
+        doctor.availableAppointments.length > 0
+    ) {
+
+        doctorAvailability.textContent =
+            `Available: ${doctor.availableAppointments.join(", ")}`;
+
+    } else {
+
+        doctorAvailability.textContent =
+            "No available appointments";
+
+    }
+
+    doctorInfo.appendChild(doctorName);
+    doctorInfo.appendChild(doctorSpecialization);
+    doctorInfo.appendChild(doctorEmail);
+    doctorInfo.appendChild(doctorAvailability);
+
+    // Actions
+    const cardActions = document.createElement("div");
+    cardActions.className = "card-actions";
+
+    // =========================
+    // ADMIN
+    // =========================
+    if (role === "admin") {
+
+        const deleteBtn = document.createElement("button");
+
+        deleteBtn.className = "adminBtn";
+        deleteBtn.textContent = "Delete Doctor";
+
+        deleteBtn.addEventListener("click", async () => {
+
+            const token =
+                localStorage.getItem("token");
+
+            if (!token) {
+
+                alert("Admin session expired.");
+
+                return;
+            }
+
+            const confirmed = confirm(
+                `Delete Dr. ${doctor.name}?`
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+
+                await deleteDoctor(
+                    doctor.id,
+                    token
+                );
+
+                alert("Doctor deleted successfully.");
+
+                card.remove();
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Failed to delete doctor."
+                );
+            }
+
+        });
+
+        cardActions.appendChild(deleteBtn);
+    }
+
+    // =========================
+    // PATIENT (NOT LOGGED IN)
+    // =========================
+    else if (role === "patient") {
+
+        const bookBtn = document.createElement("button");
+
+        bookBtn.textContent = "Book Now";
+
+        bookBtn.addEventListener("click", () => {
+
+            alert(
+                "Please login before booking an appointment."
+            );
+
+        });
+
+        cardActions.appendChild(bookBtn);
+    }
+
+    // =========================
+    // LOGGED PATIENT
+    // =========================
+    else if (role === "loggedPatient") {
+
+        const bookBtn = document.createElement("button");
+
+        bookBtn.textContent = "Book Now";
+
+        bookBtn.addEventListener("click", async () => {
+
+            const token =
+                localStorage.getItem("token");
+
+            if (!token) {
+
+                window.location.href =
+                    "/pages/patientDashboard.html";
+
+                return;
+            }
+
+            try {
+
+                const patient =
+                    await getPatientProfile(token);
+
+                overlay(
+                    doctor,
+                    patient
+                );
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Unable to retrieve patient information."
+                );
+            }
+
+        });
+
+        cardActions.appendChild(bookBtn);
+    }
+
+    card.appendChild(doctorInfo);
+    card.appendChild(cardActions);
+
+    return card;
+}
+
 /*
 Import the overlay function for booking appointments from loggedPatient.js
 

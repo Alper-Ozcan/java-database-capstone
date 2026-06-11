@@ -1,3 +1,177 @@
+// doctorServices.js
+
+import { API_BASE_URL } from "../config/config.js";
+
+/*
+ * Doctor API Endpoint
+ */
+const DOCTOR_API = `${API_BASE_URL}/doctors`;
+
+/*
+ * Function: getDoctors
+ * Purpose: Fetch all doctors
+ */
+export async function getDoctors() {
+
+    try {
+
+        const response = await fetch(DOCTOR_API);
+
+        const data = await response.json();
+
+        return data.doctors || [];
+
+    } catch (error) {
+
+        console.error(
+            "Error fetching doctors:",
+            error
+        );
+
+        return [];
+    }
+}
+
+/*
+ * Function: deleteDoctor
+ * Purpose: Delete doctor by ID
+ */
+export async function deleteDoctor(
+    doctorId,
+    token
+) {
+
+    try {
+
+        const response = await fetch(
+            `${DOCTOR_API}/${doctorId}/${token}`,
+            {
+                method: "DELETE"
+            }
+        );
+
+        const data = await response.json();
+
+        return {
+            success: response.ok,
+            message:
+                data.message ||
+                "Doctor deleted successfully."
+        };
+
+    } catch (error) {
+
+        console.error(
+            "Error deleting doctor:",
+            error
+        );
+
+        return {
+            success: false,
+            message:
+                "Failed to delete doctor."
+        };
+    }
+}
+
+/*
+ * Function: saveDoctor
+ * Purpose: Create a new doctor
+ */
+export async function saveDoctor(
+    doctor,
+    token
+) {
+
+    try {
+
+        const response = await fetch(
+            `${DOCTOR_API}/${token}`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify(
+                    doctor
+                )
+            }
+        );
+
+        const data = await response.json();
+
+        return {
+            success: response.ok,
+            message:
+                data.message ||
+                "Doctor saved successfully."
+        };
+
+    } catch (error) {
+
+        console.error(
+            "Error saving doctor:",
+            error
+        );
+
+        return {
+            success: false,
+            message:
+                "Failed to save doctor."
+        };
+    }
+}
+
+/*
+ * Function: filterDoctors
+ * Purpose: Filter doctors by
+ * name, time and specialty
+ */
+export async function filterDoctors(
+    name = "",
+    time = "",
+    specialty = ""
+) {
+
+    try {
+
+        const response = await fetch(
+            `${DOCTOR_API}/filter/${encodeURIComponent(name)}/${encodeURIComponent(time)}/${encodeURIComponent(specialty)}`
+        );
+
+        if (response.ok) {
+
+            return await response.json();
+        }
+
+        console.error(
+            "Failed to filter doctors."
+        );
+
+        return {
+            doctors: []
+        };
+
+    } catch (error) {
+
+        console.error(
+            "Error filtering doctors:",
+            error
+        );
+
+        alert(
+            "Unable to retrieve doctors."
+        );
+
+        return {
+            doctors: []
+        };
+    }
+}
+
 /*
   Import the base API URL from the config file
   Define a constant DOCTOR_API to hold the full endpoint for doctor-related actions

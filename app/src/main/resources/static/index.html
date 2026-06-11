@@ -36,9 +36,9 @@
                     <h2>Select Your Role</h2>
 
                     <div class="role-buttons">
-                        <button id="adminBtn">Admin</button>
-                        <button id="patientBtn">Patient</button>
-                        <button id="doctorBtn">Doctor</button>
+                        <button id="adminRoleBtn">Admin</button>
+                        <button id="patientRoleBtn">Patient</button>
+                        <button id="doctorRoleBtn">Doctor</button>
                     </div>
 
                 </section>
@@ -53,23 +53,21 @@
     </div>
 
     <!-- Modal -->
-    <div id="modalOverlay" class="modal-overlay">
+    <div id="modal" class="modal">
 
-        <div class="modal">
+        <div class="modal-content">
 
-            <button id="closeModal" class="close-btn">
+            <span id="closeModal" class="close">
                 &times;
-            </button>
+            </span>
 
-            <div id="modalContent" class="modal-content">
-                <!-- Dynamic login form -->
-            </div>
+            <div id="modal-body"></div>
 
         </div>
 
     </div>
 
-    <script type="module" src="js/services/index.js"></script>
+    <script type="module" src="js/services/index.js" defer></script>
 
 </body>
 

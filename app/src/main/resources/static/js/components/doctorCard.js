@@ -1,8 +1,8 @@
 // doctorCard.js
 
-import { overlay } from "../loggedPatient.js";
+import { showBookingOverlay } from "../loggedPatient.js";
 import { deleteDoctor } from "../services/doctorServices.js";
-import { getPatientProfile } from "../services/patientServices.js";
+import { getPatientData } from "../services/patientServices.js";
 
 export function createDoctorCard(doctor) {
 

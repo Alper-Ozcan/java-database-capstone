@@ -1,6 +1,9 @@
 // modals.js
 export function openModal(type) {
   let modalContent = '';
+  
+  console.log("open modal called with type:", type);
+  
   if (type === 'addDoctor') {
     modalContent = `
          <h2>Add Doctor</h2>
@@ -71,6 +74,7 @@ export function openModal(type) {
         <button class="dashboard-btn" id="doctorLoginBtn" >Login</button>
       `;
   }
+  console.log("Modal content css den acılacak:", modalContent);
 
   document.getElementById('modal-body').innerHTML = modalContent;
   document.getElementById('modal').style.display = 'block';
@@ -78,6 +82,8 @@ export function openModal(type) {
   document.getElementById('closeModal').onclick = () => {
     document.getElementById('modal').style.display = 'none';
   };
+
+  console.log("Modal content css den acıldı");
 
   if (type === "patientSignup") {
     document.getElementById("signupBtn").addEventListener("click", signupPatient);

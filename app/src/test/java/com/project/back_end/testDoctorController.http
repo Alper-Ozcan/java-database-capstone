@@ -1,0 +1,77 @@
+@baseUrl = http://localhost:8080/doctor
+@drtoken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkci5hZGFtc0BleGFtcGxlLmNvbSIsImlhdCI6MTc4MTI0OTgwNywiZXhwIjoxNzgxODU0NjA3fQ.X_HAVOD6MnJPO-nIse5KGD1kl8VCOK97ncWoj7PoUIg
+@adminToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc4MTI0OTg0OSwiZXhwIjoxNzgxODU0NjQ5fQ.rHf4aUcdj098tEEQU8iJSz1XByc2SYjEt9GuvSvh2TI
+@name = t
+@speciality = Cardiologist
+@time = PM
+
+### filter dr
+GET {{baseUrl}}/filter/{{name}}/{{time}}/{{speciality}}
+Accept: application/json
+
+
+### Login doctor
+POST {{baseUrl}}/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "dr.adams@example.com",
+  "password": "pass12345"
+}
+
+### Get all doctors
+GET {{baseUrl}}
+Accept: application/json
+
+
+### Get doctor by id
+GET {{baseUrl}}/1
+Accept: application/json
+
+
+### Create new doctor
+POST {{baseUrl}}/{{adminToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "dr.newdoctor@example.com",
+  "password": "doctor@1234",
+  "name": "Ali",
+  "specialty": "Cardiology",
+  "phone": "5551234567"
+}
+
+### Get doctor availability
+
+
+### Senaryo 1: Bir Hastanın (Patient), 1 Numaralı Doktorun 25 Haziran 2026 Tarihindeki Müsait Saatlerini Sorgulaması
+GET {{baseUrl}}/availability/patient/1/2026-06-25/{{drtoken}}
+Accept: application/json
+
+
+### Senaryo 2: Bir Doktorun (Doctor), Kendisinin veya Bir Meslektaşının Aynı Tarihteki Müsait Saatlerini Sorgulaması
+GET {{baseUrl}}/availability/doctor/1/2026-06-25/{{drtoken}}
+Accept: application/json
+
+
+
+
+### Update doctor
+PUT {{baseUrl}}/1
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "dr.newdoctor@example.com",
+  "password": "doctor@1234",
+  "name": "Ali",
+  "specialty": "Cardiology",
+  "phone": "5551234567"
+}
+
+### Delete doctor
+DELETE {{baseUrl}}/1
+Accept: application/json
+

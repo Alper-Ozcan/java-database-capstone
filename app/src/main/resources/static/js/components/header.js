@@ -209,22 +209,30 @@ function attachHeaderButtonListeners() {
 
         });
 
+    // Admin Ana Sayfa Butonu
     document
         .getElementById("adminHomeBtn")
         ?.addEventListener("click", () => {
-
-            window.location.href =
-                "/admin/dashboard";
-
+            const token = localStorage.getItem("token");
+            if (!token) {
+                window.location.href = "/"; // Token yoksa giriş sayfasına at
+                return;
+            }
+            // 🔥 KESİN ÇÖZÜM: Başına '/' koyarak kök dizinden başlar ve token'ı URL'e pürüzsüz ekler
+            window.location.href = `/adminDashboard/${token}`;
         });
 
+    // Doktor Ana Sayfa Butonu
     document
         .getElementById("doctorHomeBtn")
         ?.addEventListener("click", () => {
-
-            window.location.href =
-                "/doctor/dashboard";
-
+            const token = localStorage.getItem("token");
+            if (!token) {
+                window.location.href = "/";
+                return;
+            }
+            // 🔥 KESİN ÇÖZÜM: Başına '/' koyarak Spring Boot Controller rotasına token ile uçar
+            window.location.href = `/doctorDashboard/${token}`;
         });
 
     document

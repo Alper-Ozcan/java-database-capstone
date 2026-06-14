@@ -1,66 +1,181 @@
 package com.project.back_end.repo;
 
-public interface AppointmentRepository  {
+import java.time.LocalDateTime;
+import java.util.List;
 
-   // 1. Extend JpaRepository:
-//    - The repository extends JpaRepository<Appointment, Long>, which gives it basic CRUD functionality.
-//    - The methods such as save, delete, update, and find are inherited without the need for explicit implementation.
-//    - JpaRepository also includes pagination and sorting features.
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
-// Example: public interface AppointmentRepository extends JpaRepository<Appointment, Long> {}
+import com.project.back_end.models.Appointment;
 
-// 2. Custom Query Methods:
+@Repository // 4. Spring Data JPA repository bileşeni olarak işaretler
+public interface AppointmentRepository extends JpaRepository<Appointment, Long> { // 1. Temel CRUD özelliklerini miras alır
 
-//    - **findByDoctorIdAndAppointmentTimeBetween**:
-//      - This method retrieves a list of appointments for a specific doctor within a given time range.
-//      - The doctor’s available times are eagerly fetched to avoid lazy loading.
-//      - Return type: List<Appointment>
-//      - Parameters: Long doctorId, LocalDateTime start, LocalDateTime end
-//      - It uses a LEFT JOIN to fetch the doctor’s available times along with the appointments.
+    // 2. Özel Sorgu Metotları (Custom Query Methods)
 
-//    - **findByDoctorIdAndPatient_NameContainingIgnoreCaseAndAppointmentTimeBetween**:
-//      - This method retrieves appointments for a specific doctor and patient name (ignoring case) within a given time range.
-//      - It performs a LEFT JOIN to fetch both the doctor and patient details along with the appointment times.
-//      - Return type: List<Appointment>
-//      - Parameters: Long doctorId, String patientName, LocalDateTime start, LocalDateTime end
+    // 🔥 DÜZELTME: d.availableTimes koleksiyonu da JOIN FETCH edilerek 'no Session' hatası kökten çözüldü
+    @Query("SELECT a FROM Appointment a " +
+           "LEFT JOIN FETCH a.doctor d " +
+           "LEFT JOIN FETCH d.availableTimes " + 
+           "WHERE d.id = :doctorId AND a.appointmentTime BETWEEN :start AND :end")
+    List<Appointment> findByDoctorIdAndAppointmentTimeBetween(@Param("doctorId") Long doctorId, 
+                                                              @Param("start") LocalDateTime start, 
+                                                              @Param("end") LocalDateTime end);
 
-//    - **deleteAllByDoctorId**:
-//      - This method deletes all appointments associated with a particular doctor.
-//      - It is marked as @Modifying and @Transactional, which makes it a modification query, ensuring that the operation is executed within a transaction.
-//      - Return type: void
-//      - Parameters: Long doctorId
+    // 🔥 DÜZELTME: d.availableTimes koleksiyonu da JOIN FETCH edilerek 'no Session' hatası kökten çözüldü
+    @Query("SELECT a FROM Appointment a " +
+           "LEFT JOIN FETCH a.doctor d " +
+           "LEFT JOIN FETCH d.availableTimes " + 
+           "LEFT JOIN FETCH a.patient p " +
+           "WHERE d.id = :doctorId AND LOWER(p.name) LIKE LOWER(CONCAT('%', :patientName, '%')) " +
+           "AND a.appointmentTime BETWEEN :start AND :end")
+    List<Appointment> findByDoctorIdAndPatient_NameContainingIgnoreCaseAndAppointmentTimeBetween(
+            @Param("doctorId") Long doctorId, 
+            @Param("patientName") String patientName, 
+            @Param("start") LocalDateTime start, 
+            @Param("end") LocalDateTime end);
 
-//    - **findByPatientId**:
-//      - This method retrieves all appointments for a specific patient.
-//      - Return type: List<Appointment>
-//      - Parameters: Long patientId
+    // 3. Veri silme işlemi için @Modifying ve @Transactional yapılandırması
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Appointment a WHERE a.doctor.id = :doctorId")
+    void deleteAllByDoctorId(@Param("doctorId") Long doctorId);
 
-//    - **findByPatient_IdAndStatusOrderByAppointmentTimeAsc**:
-//      - This method retrieves all appointments for a specific patient with a given status, ordered by the appointment time.
-//      - Return type: List<Appointment>
-//      - Parameters: Long patientId, int status
+    // PatientService (satır 38) ve Service (satır 141) uyumu için hastaya ait tüm randevuları getirir
+    List<Appointment> findByPatientId(Long patientId);
 
-//    - **filterByDoctorNameAndPatientId**:
-//      - This method retrieves appointments based on a doctor’s name (using a LIKE query) and the patient’s ID.
-//      - Return type: List<Appointment>
-//      - Parameters: String doctorName, Long patientId
+    // PatientService (satır 60) ve Service (satır 132) uyumu için sıralı getirme filtresi
+    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND a.status = :status ORDER BY a.appointmentTime ASC")
+    List<Appointment> findByPatient_IdAndStatusOrderByAppointmentTimeAsc(@Param("patientId") Long patientId, @Param("status") int status);
 
-//    - **filterByDoctorNameAndPatientIdAndStatus**:
-//      - This method retrieves appointments based on a doctor’s name (using a LIKE query), patient’s ID, and a specific appointment status.
-//      - Return type: List<Appointment>
-//      - Parameters: String doctorName, Long patientId, int status
+    // PatientService (satır 74) ve Service (satır 135) uyumu için doktor ismine göre filtreleme
+    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND LOWER(a.doctor.name) LIKE LOWER(CONCAT('%', :doctorName, '%'))")
+    List<Appointment> filterByDoctorNameAndPatientId(@Param("doctorName") String doctorName, @Param("patientId") Long patientId);
 
-//    - **updateStatus**:
-//      - This method updates the status of a specific appointment based on its ID.
-//      - Return type: void
-//      - Parameters: int status, long id
+    // PatientService (satır 96) ve Service (satır 129) uyumu için çoklu filtreleme
+    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND a.status = :status AND LOWER(a.doctor.name) LIKE LOWER(CONCAT('%', :doctorName, '%'))")
+    List<Appointment> filterByDoctorNameAndPatientIdAndStatus(@Param("doctorName") String doctorName, @Param("patientId") Long patientId, @Param("status") int status);
 
-// 3. @Modifying and @Transactional annotations:
-//    - The @Modifying annotation is used to indicate that the method performs a modification operation (like DELETE or UPDATE).
-//    - The @Transactional annotation ensures that the modification is done within a transaction, meaning that if any exception occurs, the changes will be rolled back.
+    // Veri güncelleme (UPDATE) işlemi için @Modifying yapısı
+    @Modifying
+    @Transactional
+    @Query("UPDATE Appointment a SET a.status = :status WHERE a.id = :id")
+    void updateStatus(@Param("status") int status, @Param("id") long id);
 
-// 4. @Repository annotation:
-//    - The @Repository annotation marks this interface as a Spring Data JPA repository.
-//    - Spring Data JPA automatically implements this repository, providing the necessary CRUD functionality and custom queries defined in the interface.
+    // --- Servis Katmanlarınızdaki Diğer Çağrılar İçin Eklenen Zorunlu Köprü Metotlar ---
 
+    // Service.java (satır 101) içerisindeki doktor randevu çakışma kontrolü için:
+    boolean existsByDoctorIdAndAppointmentTime(Long doctorId, LocalDateTime appointmentTime);
+
+    // DoctorService.java (satır 85) içerisindeki doktor silme bağımlılığı için:
+    void deleteByDoctorId(Long doctorId);
+
+    // Tarih bazlı listeleme köprü metodu
+    default List<Appointment> findByDoctorIdAndAppointmentDate(Long doctorId, java.time.LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay(); 
+        LocalDateTime endOfDay = date.atTime(java.time.LocalTime.MAX); 
+        return findByDoctorIdAndAppointmentTimeBetween(doctorId, startOfDay, endOfDay);
+    }
+
+    // İsim kırılımlı tarih listelemesi köprü metodu
+    default List<Appointment> findByDoctorIdAndAppointmentDateAndPatientNameContainingIgnoreCase(
+            Long doctorId, java.time.LocalDate date, String patientName) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(java.time.LocalTime.MAX);
+        return findByDoctorIdAndPatient_NameContainingIgnoreCaseAndAppointmentTimeBetween(doctorId, patientName, startOfDay, endOfDay);
+    }
+
+    // PatientService.java içindeki isimlendirme standart varyasyonları için alias köprüleri:
+    default List<Appointment> findByPatientIdAndStatus(Long patientId, int status) {
+        return findByPatient_IdAndStatusOrderByAppointmentTimeAsc(patientId, status);
+    }
+    default List<Appointment> findByPatientIdAndDoctorNameContainingIgnoreCase(Long patientId, String doctorName) {
+        return filterByDoctorNameAndPatientId(doctorName, patientId);
+    }
+    default List<Appointment> findByPatientIdAndStatusAndDoctorNameContainingIgnoreCase(Long patientId, int status, String doctorName) {
+        return filterByDoctorNameAndPatientIdAndStatus(doctorName, patientId, status);
+    }
 }
+
+
+/*
+@Repository // 4. Spring Data JPA repository bileşeni olarak işaretler
+public interface AppointmentRepository extends JpaRepository<Appointment, Long> { // 1. Temel CRUD özelliklerini miras alır
+
+    // 2. Özel Sorgu Metotları (Custom Query Methods)
+
+    // Eager fetching sağlamak için JOIN FETCH içeren JPQL sorgusu
+    @Query("SELECT a FROM Appointment a LEFT JOIN FETCH a.doctor d WHERE d.id = :doctorId AND a.appointmentTime BETWEEN :start AND :end")
+    List<Appointment> findByDoctorIdAndAppointmentTimeBetween(@Param("doctorId") Long doctorId, 
+                                                              @Param("start") LocalDateTime start, 
+                                                              @Param("end") LocalDateTime end);
+
+    // Doktor ve hasta detaylarını JOIN FETCH ile birlikte çeken case-insensitive arama sorgusu
+    @Query("SELECT a FROM Appointment a LEFT JOIN FETCH a.doctor d LEFT JOIN FETCH a.patient p " +
+           "WHERE d.id = :doctorId AND LOWER(p.name) LIKE LOWER(CONCAT('%', :patientName, '%')) " +
+           "AND a.appointmentTime BETWEEN :start AND :end")
+    List<Appointment> findByDoctorIdAndPatient_NameContainingIgnoreCaseAndAppointmentTimeBetween(@Param("doctorId") Long doctorId, 
+                                                                                                  @Param("patientName") String patientName, 
+                                                                                                  @Param("start") LocalDateTime start, 
+                                                                                                  @Param("end") LocalDateTime end);
+
+    // 3. Veri silme işlemi için @Modifying ve @Transactional yapılandırması
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Appointment a WHERE a.doctor.id = :doctorId")
+    void deleteAllByDoctorId(@Param("doctorId") Long doctorId);
+
+    // PatientService (satır 38) ve Service (satır 141) uyumu için hastaya ait tüm randevuları getirir
+    List<Appointment> findByPatientId(Long patientId);
+
+    // PatientService (satır 60) ve Service (satır 132) uyumu için sıralı getirme filtresi
+    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND a.status = :status ORDER BY a.appointmentTime ASC")
+    List<Appointment> findByPatient_IdAndStatusOrderByAppointmentTimeAsc(@Param("patientId") Long patientId, @Param("status") int status);
+
+    // PatientService (satır 74) ve Service (satır 135) uyumu için doktor ismine göre filtreleme
+    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND LOWER(a.doctor.name) LIKE LOWER(CONCAT('%', :doctorName, '%'))")
+    List<Appointment> filterByDoctorNameAndPatientId(@Param("doctorName") String doctorName, @Param("patientId") Long patientId);
+
+    // PatientService (satır 96) ve Service (satır 129) uyumu için çoklu filtreleme
+    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND a.status = :status AND LOWER(a.doctor.name) LIKE LOWER(CONCAT('%', :doctorName, '%'))")
+    List<Appointment> filterByDoctorNameAndPatientIdAndStatus(@Param("doctorName") String doctorName, @Param("patientId") Long patientId, @Param("status") int status);
+
+    // Veri güncelleme (UPDATE) işlemi için @Modifying yapısı
+    @Modifying
+    @Transactional
+    @Query("UPDATE Appointment a SET a.status = :status WHERE a.id = :id")
+    void updateStatus(@Param("status") int status, @Param("id") long id);
+
+    // --- Servis Katmanlarınızdaki Diğer Çağrılar İçin Eklenen Zorunlu Köprü Metotlar ---
+
+    // Service.java (satır 101) içerisindeki doktor randevu çakışma kontrolü için:
+    boolean existsByDoctorIdAndAppointmentTime(Long doctorId, LocalDateTime appointmentTime);
+
+    // DoctorService.java (satır 85) içerisindeki doktor silme bağımlılığı için:
+    void deleteByDoctorId(Long doctorId);
+
+    // AppointmentService.java (satır 102) ve DoctorService.java (satır 36) tarih bazlı listeleme için:
+    // NOT: Veri tabanında LocalDateTime tutulduğu için JPQL içinde tarih dönüşümü yapılarak eşleme sağlanır.
+    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId AND CAST(a.appointmentTime AS date) = :date")
+    List<Appointment> findByDoctorIdAndAppointmentDate(@Param("doctorId") Long doctorId, @Param("date") java.time.LocalDate date);
+
+    // AppointmentService.java (satır 100) için isim kırılımlı tarih listelemesi:
+    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId AND CAST(a.appointmentTime AS date) = :date AND LOWER(a.patient.name) LIKE LOWER(CONCAT('%', :patientName, '%'))")
+    List<Appointment> findByDoctorIdAndAppointmentDateAndPatientNameContainingIgnoreCase(@Param("doctorId") Long doctorId, @Param("date") java.time.LocalDate date, @Param("patientName") String patientName);
+
+    // PatientService.java içindeki isimlendirme standart varyasyonları için alias köprüleri:
+    default List<Appointment> findByPatientIdAndStatus(Long patientId, int status) {
+        return findByPatient_IdAndStatusOrderByAppointmentTimeAsc(patientId, status);
+    }
+    default List<Appointment> findByPatientIdAndDoctorNameContainingIgnoreCase(Long patientId, String doctorName) {
+        return filterByDoctorNameAndPatientId(doctorName, patientId);
+    }
+    default List<Appointment> findByPatientIdAndStatusAndDoctorNameContainingIgnoreCase(Long patientId, int status, String doctorName) {
+        return filterByDoctorNameAndPatientIdAndStatus(doctorName, patientId, status);
+    }
+}
+*/

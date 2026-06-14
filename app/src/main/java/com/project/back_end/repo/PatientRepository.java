@@ -1,29 +1,30 @@
 package com.project.back_end.repo;
 
-public interface PatientRepository {
-    // 1. Extend JpaRepository:
-//    - The repository extends JpaRepository<Patient, Long>, which provides basic CRUD functionality.
-//    - This allows the repository to perform operations like save, delete, update, and find without needing to implement these methods manually.
-//    - JpaRepository also includes features like pagination and sorting.
+import java.util.Optional;
 
-// Example: public interface PatientRepository extends JpaRepository<Patient, Long> {}
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-// 2. Custom Query Methods:
+import com.project.back_end.models.Patient;
 
-//    - **findByEmail**:
-//      - This method retrieves a Patient by their email address.
-//      - Return type: Patient
-//      - Parameters: String email
+@Repository // 3. Spring Data JPA repository bileşeni olarak işaretler
+public interface PatientRepository extends JpaRepository<Patient, Long> { // 1. Temel CRUD özelliklerini miras alır
 
-//    - **findByEmailOrPhone**:
-//      - This method retrieves a Patient by either their email or phone number, allowing flexibility for the search.
-//      - Return type: Patient
-//      - Parameters: String email, String phone
+    // 2. Özel Sorgu Metotları (Custom Query Methods)
 
-// 3. @Repository annotation:
-//    - The @Repository annotation marks this interface as a Spring Data JPA repository.
-//    - Spring Data JPA automatically implements this repository, providing the necessary CRUD functionality and custom queries defined in the interface.
+    // findByEmail: Hastayı e-posta adresine göre getirir.
+    // NOT: PatientService (satır 117) ve Service (satır 114) içinde .isPresent() kontrolü yaptığınız için
+    // NullPointerException riskini önlemek adına modern yaklaşımla Optional<Patient> yapılmıştır.
+    Optional<Patient> findByEmail(String email);
 
+    // findByEmailOrPhone: Hastayı e-posta VEYA telefon numarasına göre getirir.
+    Optional<Patient> findByEmailOrPhone(String email, String phone);
 
+    // --- Servis Katmanlarınızdaki Diğer Çağrılar İçin Eklenen Zorunlu Köprü Metotlar ---
+
+    // Service.java (satır 108) ve TokenService.java (satır 89) içindeki e-posta doğrulama kontrolü için:
+    boolean existsByEmail(String email);
+
+    // Service.java (satır 109) içindeki telefon numarası doğrulama kontrolü için:
+    boolean existsByPhone(String phone);
 }
-

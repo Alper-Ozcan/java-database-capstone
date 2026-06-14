@@ -4,42 +4,51 @@ console.log("index.js loaded");
 
 import { openModal } from "../components/modals.js";
 import { API_BASE_URL } from "../config/config.js";
+import { patientSignup,patientLogin } from "./patientServices.js";
 
 /*
  * Login Endpoints
  */
-const ADMIN_API = API_BASE_URL + '/admin';
+const ADMIN_API = API_BASE_URL + '/admin/login';
 const DOCTOR_API = API_BASE_URL + '/doctor/login';
+//const PATIENT_API = API_BASE_URL + '/patient/login';
 
 /*
  * Wait until DOM is loaded
  */
 window.onload = () => {
-
-
-    console.log("Admin API URL:", ADMIN_API);
-    console.log("Doctor API URL:", DOCTOR_API);
+    //console.log("Admin API URL:", ADMIN_API);
+    //console.log("Doctor API URL:", DOCTOR_API);
 
     const adminLoginBtn = document.getElementById("adminRoleBtn");
 
     const doctorLoginBtn = document.getElementById("doctorRoleBtn");
 
     const patientLoginBtn = document.getElementById("patientRoleBtn");
+    
 
     if (adminLoginBtn) {
         adminLoginBtn.addEventListener(
             "click",
-            () => openModal("adminLogin")
+            () => {
+                openModal("adminLogin");
+                // Modal HTML gövdeye basıldıktan hemen sonra butonu yakalayıp fonksiyonu bağlıyoruz:
+                document.getElementById("adminLoginBtn").addEventListener("click", window.adminLoginHandler);
+            }
         );
     }
 
     if (doctorLoginBtn) {
         doctorLoginBtn.addEventListener(
             "click",
-            () => openModal("doctorLogin")
+            () => {
+                openModal("doctorLogin");
+                // Doktor login butonunu yakalayıp fonksiyonu bağlıyoruz:
+                document.getElementById("doctorLoginBtn").addEventListener("click", window.doctorLoginHandler);
+            }
         );
     }
-
+    
     if (patientLoginBtn) {
             patientLoginBtn.addEventListener(
             "click",

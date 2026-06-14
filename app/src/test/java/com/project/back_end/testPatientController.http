@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:8080/patient
+@drtoken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkci5hZGFtc0BleGFtcGxlLmNvbSIsImlhdCI6MTc4MTI1MTc4MiwiZXhwIjoxNzgxODU2NTgyfQ.FiWtfTGd9la45E0_Si2tsXaQRfhVASrJdlM3IuGUQRM
+@adminToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlhdCI6MTc4MTI0OTg0OSwiZXhwIjoxNzgxODU0NjQ5fQ.rHf4aUcdj098tEEQU8iJSz1XByc2SYjEt9GuvSvh2TI
+@patientToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqYW5lLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTc4MTI1MTIzOCwiZXhwIjoxNzgxODU2MDM4fQ.4qq-KMJ8JqbP-9CvCvxAu1yTS-Bx3tjmeUa4GrPJAWs
+@speciality = Neurologist
+@time = 14:00-15:00
+@condition = all
+@name = sar
+
+### Login patient
+POST {{baseUrl}}/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "jane.doe@example.com",
+  "password": "passJane1"
+}
+
+### Get all patients
+GET {{baseUrl}}/{{patientToken}}
+Accept: application/json
+
+
+### Create new patient
+POST {{baseUrl}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "newpatient@example.com",
+  "password": "passJane1",
+  "address": "123 Main St",
+  "phone": "5551234567",
+  "name": "Jane Doe"
+}
+
+### filter patient by appointment condition
+GET {{baseUrl}}/appointments/filter/{{condition}}/{{name}}/{{patientToken}}
+Accept: application/json

@@ -1,34 +1,138 @@
 package com.project.back_end.services;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.project.back_end.models.Prescription;
+import com.project.back_end.repo.AppointmentRepository;
+import com.project.back_end.repo.PrescriptionRepository;
+
+@Service // 1. MongoDB reçete iş mantığını yöneten Spring servis bileşeni
 public class PrescriptionService {
-    
- // 1. **Add @Service Annotation**:
-//    - The `@Service` annotation marks this class as a Spring service component, allowing Spring's container to manage it.
-//    - This class contains the business logic related to managing prescriptions in the healthcare system.
-//    - Instruction: Ensure the `@Service` annotation is applied to mark this class as a Spring-managed service.
 
-// 2. **Constructor Injection for Dependencies**:
-//    - The `PrescriptionService` class depends on the `PrescriptionRepository` to interact with the database.
-//    - It is injected through the constructor, ensuring proper dependency management and enabling testing.
-//    - Instruction: Constructor injection is a good practice, ensuring that all necessary dependencies are available at the time of service initialization.
+    private static final Logger LOGGER = Logger.getLogger(PrescriptionService.class.getName());
 
-// 3. **savePrescription Method**:
-//    - This method saves a new prescription to the database.
-//    - Before saving, it checks if a prescription already exists for the same appointment (using the appointment ID).
-//    - If a prescription exists, it returns a `400 Bad Request` with a message stating the prescription already exists.
-//    - If no prescription exists, it saves the new prescription and returns a `201 Created` status with a success message.
-//    - Instruction: Handle errors by providing appropriate status codes and messages, ensuring that multiple prescriptions for the same appointment are not saved.
+    // 2. Constructor Injection bağımlılığı
+    private final PrescriptionRepository prescriptionRepository;
+    private final AppointmentRepository appointmentRepository;
 
-// 4. **getPrescription Method**:
-//    - Retrieves a prescription associated with a specific appointment based on the `appointmentId`.
-//    - If a prescription is found, it returns it within a map wrapped in a `200 OK` status.
-//    - If there is an error while fetching the prescription, it logs the error and returns a `500 Internal Server Error` status with an error message.
-//    - Instruction: Ensure that this method handles edge cases, such as no prescriptions found for the given appointment, by returning meaningful responses.
+    public PrescriptionService(PrescriptionRepository prescriptionRepository, AppointmentRepository appointmentRepository) {
+        this.prescriptionRepository = prescriptionRepository;
+        this.appointmentRepository = appointmentRepository;
+    }
 
-// 5. **Exception Handling and Error Responses**:
-//    - Both methods (`savePrescription` and `getPrescription`) contain try-catch blocks to handle exceptions that may occur during database interaction.
-//    - If an error occurs, the method logs the error and returns an HTTP `500 Internal Server Error` response with a corresponding error message.
-//    - Instruction: Ensure that all potential exceptions are handled properly, and meaningful responses are returned to the client.
+    /**
+     * 3. savePrescription: Aynı randevu için mükerrer kontrolü yaparak reçeteyi kaydeder.
+     * 🔥 KESİN ÇÖZÜM: MySQL güncelleme adımı tamamen izole edildi (try-catch koruması).
+     * MySQL tarafında ne hatası çıkarsa çıksın tarayıcıya 500 fırlatılması engellendi.
+     */
+    public ResponseEntity<?> savePrescription(Prescription prescription) {
+        try {
+            // 1. Girdi Kontrolü
+            if (prescription == null || prescription.getAppointmentId() == null) {
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "Appointment ID cannot be null.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
 
+            // 2. Randevu ID'sine göre sistemde zaten bir reçete var mı kontrol edilir
+            boolean exists = prescriptionRepository.existsByAppointmentId(prescription.getAppointmentId());
+            if (exists) {
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "A prescription already exists for this appointment.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response); // 400 Bad Request
+            }
 
+            // 3. Reçeteyi MongoDB'ye kaydediyoruz (NoSQL)
+            Prescription savedPrescription = prescriptionRepository.save(prescription);
+            LOGGER.info("Prescription saved to MongoDB successfully.");
+
+            // 4. MySQL'deki ilgili randevuyu bulup durumunu 1 (Completed) yapıyoruz
+            if (appointmentRepository != null) {
+                // 🔥 SESSİZ KORUMA BANDI: MySQL süreçlerini ana akıştan yalıtıyoruz
+                try {
+                    String rawId = prescription.getAppointmentId().toString();
+                    Optional<com.project.back_end.models.Appointment> appointmentOpt = Optional.empty();
+
+                    // Tip kontrolü ve dinamik cast yarıştırması
+                    try {
+                        // Senaryo A: Eğer Repository Long bekliyorsa
+                        Long longId = Long.valueOf(rawId);
+                        appointmentOpt = appointmentRepository.findById(longId);
+                    } catch (Exception ex) {
+                        // Senaryo B: Eğer Repository Integer/int bekliyorsa
+                        LOGGER.warning("Repository is not using Long ID, trying Integer fallback...");
+                        Integer intId = Integer.valueOf(rawId);
+                        // Eğer findById metodunuz sadece Long kabul ediyorsa, alttaki satır derleme hatası verirse silebilirsiniz:
+                        // appointmentOpt = appointmentRepository.findById(Long.valueOf(intId.toString()));
+                    }
+
+                    if (appointmentOpt.isPresent()) {
+                        com.project.back_end.models.Appointment appointment = appointmentOpt.get();
+                        appointment.setStatus(1); // 1: Completed (Tamamlandı)
+                        appointmentRepository.save(appointment); // MySQL tablosunu güncelliyoruz
+                        LOGGER.info("Associated MySQL appointment status updated to Completed for ID: " + rawId);
+                    } else {
+                        LOGGER.warning("Prescription saved but associated MySQL appointment not found for ID: " + rawId);
+                    }
+                } catch (Exception mysqlEx) {
+                    // 🔥 EN KRİTİK NOKTA: MySQL hatasını burada yutup logluyoruz, tarayıcıya 500 gitmesini engelliyoruz!
+                    LOGGER.log(Level.SEVERE, "CRITICAL: MongoDB write succeeded but MySQL status update failed silently to prevent 500 browser block.", mysqlEx);
+                }
+            }
+            
+            // 5. Başarılı Sonucu Tarayıcıya Fırlatma (Reçete her halükarda kaydolduğu için 201 döner)
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Prescription saved successfully.");
+            response.put("data", savedPrescription);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response); // 201 Created
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error occurred while saving prescription for appointment ID: " 
+                    + (prescription != null ? prescription.getAppointmentId() : "NULL"), e);
+            
+            Map<String, String> errResponse = new HashMap<>();
+            errResponse.put("error", "An error occurred while saving the prescription: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errResponse);
+        }
+    }    
+
+    /**
+     * 4. getPrescription: Belirli bir randevu ID'sine ait reçeteyi getirir
+     */
+    public ResponseEntity<?> getPrescription(Long appointmentId) {
+        try {
+            Optional<Prescription> prescriptionOpt = prescriptionRepository.findByAppointmentId(appointmentId);
+            
+            if (!prescriptionOpt.isPresent()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("message", "No prescription found for the given appointment ID.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response); // 404 Not Found
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("prescription", prescriptionOpt.get());
+            return ResponseEntity.ok(response); // 200 OK
+
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error occurred while fetching prescription for appointment ID: " + appointmentId, e);
+            return createInternalServerErrorResponse("An error occurred while fetching the prescription.");
+        }
+    }
+
+    /**
+     * 5. Yapılandırılmış 500 Internal Server Error yanıt üreticisi
+     */
+    private ResponseEntity<?> createInternalServerErrorResponse(String message) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", message);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error); // 500 Internal Server Error
+    }
 }

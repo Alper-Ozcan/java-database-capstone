@@ -1,58 +1,188 @@
 package com.project.back_end.services;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.project.back_end.DTO.AppointmentDTO;
+import com.project.back_end.models.Appointment;
+import com.project.back_end.models.Patient;
+import com.project.back_end.repo.AppointmentRepository;
+import com.project.back_end.repo.PatientRepository;
+
+@Service // 1. Spring-managed servis bileşeni anotasyonu
 public class PatientService {
-// 1. **Add @Service Annotation**:
-//    - The `@Service` annotation is used to mark this class as a Spring service component. 
-//    - It will be managed by Spring's container and used for business logic related to patients and appointments.
-//    - Instruction: Ensure that the `@Service` annotation is applied above the class declaration.
 
-// 2. **Constructor Injection for Dependencies**:
-//    - The `PatientService` class has dependencies on `PatientRepository`, `AppointmentRepository`, and `TokenService`.
-//    - These dependencies are injected via the constructor to maintain good practices of dependency injection and testing.
-//    - Instruction: Ensure constructor injection is used for all the required dependencies.
+    // 9. Loglama mekanizması için logger tanımı
+    private static final Logger LOGGER = Logger.getLogger(PatientService.class.getName());
 
-// 3. **createPatient Method**:
-//    - Creates a new patient in the database. It saves the patient object using the `PatientRepository`.
-//    - If the patient is successfully saved, the method returns `1`; otherwise, it logs the error and returns `0`.
-//    - Instruction: Ensure that error handling is done properly and exceptions are caught and logged appropriately.
+    // 2. Constructor Injection için bağımlılıklar
+    private final PatientRepository patientRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final TokenService tokenService;
 
-// 4. **getPatientAppointment Method**:
-//    - Retrieves a list of appointments for a specific patient, based on their ID.
-//    - The appointments are then converted into `AppointmentDTO` objects for easier consumption by the API client.
-//    - This method is marked as `@Transactional` to ensure database consistency during the transaction.
-//    - Instruction: Ensure that appointment data is properly converted into DTOs and the method handles errors gracefully.
+    public PatientService(PatientRepository patientRepository, 
+                          AppointmentRepository appointmentRepository, 
+                          TokenService tokenService) {
+        this.patientRepository = patientRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.tokenService = tokenService;
+    }
 
-// 5. **filterByCondition Method**:
-//    - Filters appointments for a patient based on the condition (e.g., "past" or "future").
-//    - Retrieves appointments with a specific status (0 for future, 1 for past) for the patient.
-//    - Converts the appointments into `AppointmentDTO` and returns them in the response.
-//    - Instruction: Ensure the method correctly handles "past" and "future" conditions, and that invalid conditions are caught and returned as errors.
+    // 3. createPatient: Yeni hasta kaydeder, hata durumunda loglama yapar
+    @Transactional
+    public int createPatient(Patient patient) {
+        try {
+            patientRepository.save(patient);
+            return 1; // Başarılı kayıt
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error occurred while creating patient: " + e.getMessage(), e);
+            return 0; // Başarısız kayıt
+        }
+    }
 
-// 6. **filterByDoctor Method**:
-//    - Filters appointments for a patient based on the doctor's name.
-//    - It retrieves appointments where the doctor’s name matches the given value, and the patient ID matches the provided ID.
-//    - Instruction: Ensure that the method correctly filters by doctor's name and patient ID and handles any errors or invalid cases.
+    // 4 & 10. getPatientAppointment: Hastanın tüm randevularını getirip DTO'ya dönüştürür
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getPatientAppointment(Long patientId) {
+        try {
+            List<Appointment> appointments = appointmentRepository.findByPatientId(patientId);
+            List<AppointmentDTO> dtoList = appointments.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtoList);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error fetching appointments for patient ID " + patientId, e);
+            return createErrorResponse("An error occurred while fetching appointments.");
+        }
+    }
 
-// 7. **filterByDoctorAndCondition Method**:
-//    - Filters appointments based on both the doctor's name and the condition (past or future) for a specific patient.
-//    - This method combines filtering by doctor name and appointment status (past or future).
-//    - Converts the appointments into `AppointmentDTO` objects and returns them in the response.
-//    - Instruction: Ensure that the filter handles both doctor name and condition properly, and catches errors for invalid input.
+    // 5. filterByCondition: Geçmiş (status: 1) veya Gelecek (status: 0) randevuları filtreler
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> filterByCondition(Long patientId, String condition) {
+        try {
+            int status;
+            if ("future".equalsIgnoreCase(condition)) {
+                status = 0;
+            } else if ("past".equalsIgnoreCase(condition)) {
+                status = 1;
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(createErrorMap("Invalid condition. Use 'past' or 'future'."));
+            }
 
-// 8. **getPatientDetails Method**:
-//    - Retrieves patient details using the `tokenService` to extract the patient's email from the provided token.
-//    - Once the email is extracted, it fetches the corresponding patient from the `patientRepository`.
-//    - It returns the patient's information in the response body.
-    //    - Instruction: Make sure that the token extraction process works correctly and patient details are fetched properly based on the extracted email.
+            List<Appointment> appointments = appointmentRepository.findByPatientIdAndStatus(patientId, status);
+            List<AppointmentDTO> dtoList = appointments.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtoList);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error filtering appointments by condition: " + condition, e);
+            return createErrorResponse("An error occurred while filtering appointments by condition.");
+        }
+    }
 
-// 9. **Handling Exceptions and Errors**:
-//    - The service methods handle exceptions using try-catch blocks and log any issues that occur. If an error occurs during database operations, the service responds with appropriate HTTP status codes (e.g., `500 Internal Server Error`).
-//    - Instruction: Ensure that error handling is consistent across the service, with proper logging and meaningful error messages returned to the client.
+    // 6. filterByDoctor: Doktor adına göre randevuları filtreler
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> filterByDoctor(Long patientId, String doctorName) {
+        try {
+            List<Appointment> appointments = appointmentRepository.findByPatientIdAndDoctorNameContainingIgnoreCase(patientId, doctorName);
+            List<AppointmentDTO> dtoList = appointments.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtoList);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error filtering appointments by doctor name: " + doctorName, e);
+            return createErrorResponse("An error occurred while filtering appointments by doctor name.");
+        }
+    }
 
-// 10. **Use of DTOs (Data Transfer Objects)**:
-//    - The service uses `AppointmentDTO` to transfer appointment-related data between layers. This ensures that sensitive or unnecessary data (e.g., password or private patient information) is not exposed in the response.
-//    - Instruction: Ensure that DTOs are used appropriately to limit the exposure of internal data and only send the relevant fields to the client.
+    // 7. filterByDoctorAndCondition: Hem doktor adına hem de duruma (past/future) göre filtreler
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> filterByDoctorAndCondition(Long patientId, String doctorName, String condition) {
+        try {
+            int status;
+            if ("future".equalsIgnoreCase(condition)) {
+                status = 0;
+            } else if ("past".equalsIgnoreCase(condition)) {
+                status = 1;
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(createErrorMap("Invalid condition. Use 'past' or 'future'."));
+            }
 
+            List<Appointment> appointments = appointmentRepository
+                    .findByPatientIdAndStatusAndDoctorNameContainingIgnoreCase(patientId, status, doctorName);
+            List<AppointmentDTO> dtoList = appointments.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtoList);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error filtering by doctor and condition", e);
+            return createErrorResponse("An error occurred during combined filtering.");
+        }
+    }
 
+    // 8. getPatientDetails: Token'dan e-posta çıkararak hasta detaylarını getirir
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getPatientDetails(String token) {
+        try {
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
 
+            String email = tokenService.extractEmail(token);
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(createErrorMap("Invalid token."));
+            }
+
+            Optional<Patient> patientOpt = patientRepository.findByEmail(email);
+            if (!patientOpt.isPresent()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(createErrorMap("Patient profile not found."));
+            }
+
+            return ResponseEntity.ok(patientOpt.get());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error extracting or fetching patient details from token", e);
+            return createErrorResponse("An error occurred while fetching patient details.");
+        }
+    }
+
+    // 10. Entity'den DTO'ya dönüşüm sağlayan özel yardımcı metot
+    private AppointmentDTO convertToDTO(Appointment appointment) {
+        return new AppointmentDTO(
+                appointment.getId(),
+                appointment.getDoctor().getId(),
+                appointment.getDoctor().getName(),
+                appointment.getPatient().getId(),
+                appointment.getPatient().getName(),
+                appointment.getPatient().getEmail(),
+                appointment.getPatient().getPhone(),
+                appointment.getPatient().getAddress(),
+                appointment.getAppointmentTime(),
+                appointment.getStatus()
+        );
+    }
+
+    // Konsolide edilmiş hata haritası üreticisi
+    private Map<String, String> createErrorMap(String message) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", message);
+        return error;
+    }
+
+    // 500 Internal Server hatası üreticisi
+    private ResponseEntity<?> createErrorResponse(String message) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(createErrorMap(message));
+    }
 }

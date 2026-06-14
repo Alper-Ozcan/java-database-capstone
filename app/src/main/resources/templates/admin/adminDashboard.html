@@ -1,24 +1,19 @@
 <!-- adminDashboard.html -->
 
 <!DOCTYPE html>
-<html lang="en"
-      xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
 
     <meta charset="UTF-8">
 
-    <link rel="icon"
-          type="image/png"
-          th:href="@{/assets/images/logo/logo.png}" />
+    <link rel="icon" type="image/png" th:href="@{/assets/images/logo/logo.png}" />
 
     <title>Admin Dashboard</title>
 
-    <link rel="stylesheet"
-          th:href="@{/assets/css/adminDashboard.css}" />
+    <link rel="stylesheet" th:href="@{/assets/css/adminDashboard.css}" />
 
-    <link rel="stylesheet"
-          th:href="@{/assets/css/style.css}" />
+    <link rel="stylesheet" th:href="@{/assets/css/style.css}" />
 
     <script th:src="@{/js/render.js}" defer></script>
     <script th:src="@{/js/util.js}" defer></script>
@@ -43,16 +38,14 @@
                 <!-- Search -->
                 <div class="search-container">
 
-                    <input type="text"
-                           id="searchBar"
-                           placeholder="Search doctors..." />
+                    <input type="text" id="searchBar" placeholder="Search doctors..." />
 
                 </div>
 
                 <!-- Filters -->
                 <div class="filter-container">
 
-                    <select id="timeFilter">
+                    <select id="filterTime">
 
                         <option value="">
                             All Times
@@ -68,7 +61,7 @@
 
                     </select>
 
-                    <select id="specialtyFilter">
+                    <select id="filterSpecialty">
 
                         <option value="">
                             All Specialties
@@ -118,32 +111,24 @@
 
     </div>
 
+
     <!-- Modal -->
     <div id="modal" class="modal">
 
         <div class="modal-content">
 
-            <span id="close-modal"
-                  class="close-btn">
+            <span id="closeModal" class="close">
                 &times;
             </span>
 
-            <div id="modal-body">
-                <!-- Dynamic Modal Content -->
-            </div>
+            <div id="modal-body"></div>
 
         </div>
 
     </div>
 
-    <script type="module"
-            th:src="@{/js/adminDashboard.js}">
-    </script>
-
-    <script type="module"
-            th:src="@{/js/components/doctorCard.js}">
-    </script>
-
+    <script type="module" src="../js/adminDashboard.js" defer></script>
+    <script type="module" src="../js/components/doctorCard.js" defer></script>
 </body>
 
 </html>
@@ -256,4 +241,3 @@ with search, filter, and modal functionality.
     * Finish the structure by properly closing all tags.
 
  -->
-

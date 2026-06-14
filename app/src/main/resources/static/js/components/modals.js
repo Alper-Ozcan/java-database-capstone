@@ -1,9 +1,9 @@
 // modals.js
 export function openModal(type) {
   let modalContent = '';
-  
-  console.log("open modal called with type:", type);
-  
+
+  //console.log("open modal called with type:", type);
+
   if (type === 'addDoctor') {
     modalContent = `
          <h2>Add Doctor</h2>
@@ -43,19 +43,19 @@ export function openModal(type) {
   } else if (type === 'patientLogin') {
     modalContent = `
         <h2>Patient Login</h2>
-        <input type="text" id="email" placeholder="Email" class="input-field">
-        <input type="password" id="password" placeholder="Password" class="input-field">
+        <input type="text" id="pemail" placeholder="Email" class="input-field">
+        <input type="password" id="ppassword" placeholder="Password" class="input-field">
         <button class="dashboard-btn" id="loginBtn">Login</button>
       `;
   }
   else if (type === "patientSignup") {
     modalContent = `
       <h2>Patient Signup</h2>
-      <input type="text" id="name" placeholder="Name" class="input-field">
-      <input type="email" id="email" placeholder="Email" class="input-field">
-      <input type="password" id="password" placeholder="Password" class="input-field">
-      <input type="text" id="phone" placeholder="Phone" class="input-field">
-      <input type="text" id="address" placeholder="Address" class="input-field">
+      <input type="text" id="pname" placeholder="Name" class="input-field">
+      <input type="email" id="pemail" placeholder="Email" class="input-field">
+      <input type="password" id="ppassword" placeholder="Password" class="input-field">
+      <input type="text" id="pphone" placeholder="Phone" class="input-field">
+      <input type="text" id="paddress" placeholder="Address" class="input-field">
       <button class="dashboard-btn" id="signupBtn">Signup</button>
     `;
 
@@ -74,27 +74,27 @@ export function openModal(type) {
         <button class="dashboard-btn" id="doctorLoginBtn" >Login</button>
       `;
   }
-  console.log("Modal content css den acılacak:", modalContent);
+  //console.log("Modal content css den acılacak:", modalContent);
 
   document.getElementById('modal-body').innerHTML = modalContent;
   document.getElementById('modal').style.display = 'block';
 
-  document.getElementById('closeModal').onclick = () => {
-    document.getElementById('modal').style.display = 'none';
-  };
 
-  console.log("Modal content css den acıldı");
+  document.getElementById('closeModal').onclick = () => { document.getElementById('modal').style.display = 'none'; };
+
+
+  //console.log("Modal content css den acıldı");
 
   if (type === "patientSignup") {
-    document.getElementById("signupBtn").addEventListener("click", signupPatient);
+    document.getElementById("signupBtn").addEventListener("click", window.patientSingupHandler); 
   }
 
   if (type === "patientLogin") {
-    document.getElementById("loginBtn").addEventListener("click", loginPatient);
+    document.getElementById("loginBtn").addEventListener("click", window.patientLoginHandler);
   }
 
   if (type === 'addDoctor') {
-    document.getElementById('saveDoctorBtn').addEventListener('click', adminAddDoctor);
+    document.getElementById('saveDoctorBtn').addEventListener('click', window.adminAddDoctor);
   }
 
   if (type === 'adminLogin') {
@@ -103,5 +103,13 @@ export function openModal(type) {
 
   if (type === 'doctorLogin') {
     document.getElementById('doctorLoginBtn').addEventListener('click', doctorLoginHandler);
+  }
+}
+
+export function closeModal() {
+  //console.log("closeModal called");
+  const modal = document.getElementById('modal');
+  if (modal) {
+    modal.style.display = 'none';
   }
 }

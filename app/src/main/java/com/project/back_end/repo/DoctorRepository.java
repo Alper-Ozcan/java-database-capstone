@@ -1,39 +1,41 @@
 package com.project.back_end.repo;
 
-public interface DoctorRepository {
-   // 1. Extend JpaRepository:
-//    - The repository extends JpaRepository<Doctor, Long>, which gives it basic CRUD functionality.
-//    - This allows the repository to perform operations like save, delete, update, and find without needing to implement these methods manually.
-//    - JpaRepository also includes features like pagination and sorting.
+import java.util.List;
+import java.util.Optional;
 
-// Example: public interface DoctorRepository extends JpaRepository<Doctor, Long> {}
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
-// 2. Custom Query Methods:
+import com.project.back_end.models.Doctor;
 
-//    - **findByEmail**:
-//      - This method retrieves a Doctor by their email.
-//      - Return type: Doctor
-//      - Parameters: String email
+@Repository // 3. Spring Data JPA repository bileşeni olarak işaretler
+public interface DoctorRepository extends JpaRepository<Doctor, Long> { // 1. Temel CRUD özelliklerini miras alır
 
-//    - **findByNameLike**:
-//      - This method retrieves a list of Doctors whose name contains the provided search string (case-sensitive).
-//      - The `CONCAT('%', :name, '%')` is used to create a pattern for partial matching.
-//      - Return type: List<Doctor>
-//      - Parameters: String name
+    // 2. Özel Sorgu Metotları (Custom Query Methods)
 
-//    - **findByNameContainingIgnoreCaseAndSpecialtyIgnoreCase**:
-//      - This method retrieves a list of Doctors where the name contains the search string (case-insensitive) and the specialty matches exactly (case-insensitive).
-//      - It combines both fields for a more specific search.
-//      - Return type: List<Doctor>
-//      - Parameters: String name, String specialty
+    // findByEmail: Doktoru e-posta adresine göre getirir.
+    // NOT: DoctorService (satır 100) içinde .isPresent() kontrolü yaptığınız için 
+    // NullPointerException riskini önlemek adına modern yaklaşımla Optional<Doctor> yapılmıştır.
+    Optional<Doctor> findByEmail(String email);
 
-//    - **findBySpecialtyIgnoreCase**:
-//      - This method retrieves a list of Doctors with the specified specialty, ignoring case sensitivity.
-//      - Return type: List<Doctor>
-//      - Parameters: String specialty
+    // findByNameLike: İsme göre kısmi ve büyük/küçük harf duyarlı (case-sensitive) arama yapar.
+    @Query("SELECT d FROM Doctor d WHERE d.name LIKE CONCAT('%', :name, '%')")
+    List<Doctor> findByNameLike(@Param("name") String name);
 
-// 3. @Repository annotation:
-//    - The @Repository annotation marks this interface as a Spring Data JPA repository.
-//    - Spring Data JPA automatically implements this repository, providing the necessary CRUD functionality and custom queries defined in the interface.
+    // findByNameContainingIgnoreCaseAndSpecialtyIgnoreCase: 
+    // Hem isme hem de uzmanlığa göre büyük/küçük harf duyarsız (case-insensitive) arama yapar.
+    List<Doctor> findByNameContainingIgnoreCaseAndSpecialtyIgnoreCase(String name, String specialty);
 
+    // findBySpecialtyIgnoreCase: Uzmanlığa göre büyük/küçük harf duyarsız arama yapar.
+    List<Doctor> findBySpecialtyIgnoreCase(String specialty);
+
+    // --- Servis Katmanlarınızdaki Diğer Çağrılar İçin Eklenen Zorunlu Köprü Metotlar ---
+
+    // DoctorService (satır 51) ve Service (satır 73) içerisindeki e-posta çakışma kontrolü için:
+    boolean existsByEmail(String email);
+
+    // Service (satır 91) ve DoctorService (satır 109, 128) içindeki isme göre büyük/küçük harf duyarsız arama için:
+    List<Doctor> findByNameContainingIgnoreCase(String name);
 }

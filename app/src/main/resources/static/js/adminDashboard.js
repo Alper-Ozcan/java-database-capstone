@@ -4,291 +4,142 @@ import { openModal, closeModal } from "./components/modals.js";
 
 import {
     getDoctors,
-    filterDoctors,
-    saveDoctor
+    saveDoctor,
+    getFilteredDoctors
 } from "./services/doctorServices.js";
 
 import {
     createDoctorCard
 } from "./components/doctorCard.js";
 
+document.addEventListener("DOMContentLoaded", () => {loadDoctorCards();});
+
 /*
  * Open Add Doctor Modal
  */
-document
-    .getElementById("addDocBtn")
-    ?.addEventListener("click", () => {
-
-        openModal("addDoctor");
-
-    });
+document.getElementById("addDocBtn")?.addEventListener("click", () => {openModal("addDoctor");});
 
 /*
  * Initial Page Load
  */
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        loadDoctorCards();
-
-    }
-);
+//document.addEventListener("DOMContentLoaded",() => {loadDoctorCards();});
 
 /*
  * Load All Doctors
  */
 export async function loadDoctorCards() {
-
     try {
-
-        const doctors =
-            await getDoctors();
-
+        const doctors = await getDoctors();
         renderDoctorCards(doctors);
-
+        console.log("Doctors loaded:");
     } catch (error) {
-
-        console.error(
-            "Error loading doctors:",
-            error
-        );
-
+        console.error( "Error loading doctors:",error);
     }
 }
 
 /*
- * Filter Event Listeners
+ * set Filters Event Listeners
  */
-document
-    .getElementById("searchBar")
-    ?.addEventListener(
-        "input",
-        filterDoctorsOnChange
-    );
-
-document
-    .getElementById("filterTime")
-    ?.addEventListener(
-        "change",
-        filterDoctorsOnChange
-    );
-
-document
-    .getElementById("filterSpecialty")
-    ?.addEventListener(
-        "change",
-        filterDoctorsOnChange
-    );
+// Filter Input
+document.getElementById("searchBar").addEventListener("input", adminFilterDoctorsOnChange);
+document.getElementById("filterTime").addEventListener("change", adminFilterDoctorsOnChange);
+document.getElementById("filterSpecialty").addEventListener("change", adminFilterDoctorsOnChange);
 
 /*
- * Filter Doctors
+ * Filter Doctors 
  */
-async function filterDoctorsOnChange() {
-
+async function adminFilterDoctorsOnChange() {
+    console.log("Filter change detected");
     try {
+        const name = document.getElementById("searchBar")?.value?.trim() || null;
+        const time = document.getElementById("filterTime")?.value || null;
+        const specialty = document.getElementById("filterSpecialty")?.value || null;
 
-        const name =
-            document.getElementById(
-                "searchBar"
-            )?.value?.trim() || null;
+        console.log("Filter parameters:", name, time, specialty);
 
-        const time =
-            document.getElementById(
-                "filterTime"
-            )?.value || null;
+        const doctors = await getFilteredDoctors(name, time, specialty);
 
-        const specialty =
-            document.getElementById(
-                "filterSpecialty"
-            )?.value || null;
-
-        const result =
-            await filterDoctors(
-                name,
-                time,
-                specialty
-            );
-
-        const doctors =
-            result.doctors || [];
+        console.log("HTML'e gönderilmeye hazırlanan doktor listesi:", doctors);
 
         if (doctors.length > 0) {
-
-            renderDoctorCards(
-                doctors
-            );
-
+            renderDoctorCards(doctors);
         } else {
-
-            const content =
-                document.getElementById(
-                    "content"
-                );
-
-            content.innerHTML = `
-                <p class="noDoctorMessage">
-                    No doctors found with the given filters.
-                </p>
-            `;
+            const content = document.getElementById("content");
+            if (content) {
+                content.innerHTML = `
+                    <p class="noDoctorMessage">
+                        No doctors found with the given filters.
+                    </p>
+                `;
+            }
         }
-
     } catch (error) {
-
-        console.error(
-            "Filter error:",
-            error
-        );
-
-        alert(
-            "Unable to filter doctors."
-        );
+        console.error("Filter error:", error);
+        alert("Unable to filter doctors.");
     }
 }
 
 /*
  * Render Doctor Cards
  */
-function renderDoctorCards(
-    doctors
-) {
-
-    const content =
-        document.getElementById(
-            "content"
-        );
-
+function renderDoctorCards(doctors) {
+    const content = document.getElementById("content");
     content.innerHTML = "";
-
     doctors.forEach(doctor => {
-
-        const card =
-            createDoctorCard(
-                doctor
-            );
-
+        const card = createDoctorCard(doctor);
         content.appendChild(card);
-
     });
 }
 
-/*
- * Add Doctor Handler
- */
-window.adminAddDoctor =
-    async function () {
+window.adminAddDoctor = async function () {
+    // 1. DÜZELTME: modals.js içindeki HTML ID'leri ile birebir eşitlendi
+    const doctorName = document.getElementById("doctorName")?.value;
+    const doctorEmail = document.getElementById("doctorEmail")?.value;
+    const doctorPhone = document.getElementById("doctorPhone")?.value;
+    const doctorPassword = document.getElementById("doctorPassword")?.value;
+    const specialty = document.getElementById("specialization")?.value; // doctorSpecialty yerine specialization yapıldı
 
-        const doctorName =
-            document.getElementById(
-                "doctorName"
-            )?.value;
+    // 2. DÜZELTME: Seçili checkbox saat dilimlerini diziye çeviriyoruz
+    const checkedBoxes = document.querySelectorAll('input[name="availability"]:checked');
+    const availableTimes = Array.from(checkedBoxes).map(box => box.value);
 
-        const doctorEmail =
-            document.getElementById(
-                "doctorEmail"
-            )?.value;
+    const token = localStorage.getItem("token");
 
-        const doctorPhone =
-            document.getElementById(
-                "doctorPhone"
-            )?.value;
+    if (!token) {
+        alert("Admin session expired.");
+        return;
+    }
 
-        const doctorPassword =
-            document.getElementById(
-                "doctorPassword"
-            )?.value;
-
-        const specialty =
-            document.getElementById(
-                "doctorSpecialty"
-            )?.value;
-
-        const availableTimes =
-            document.getElementById(
-                "availableTimes"
-            )?.value;
-
-        const token =
-            localStorage.getItem(
-                "token"
-            );
-
-        if (!token) {
-
-            alert(
-                "Admin session expired."
-            );
-
-            return;
-        }
-
-        const doctor = {
-
-            name:
-                doctorName,
-
-            email:
-                doctorEmail,
-
-            phone:
-                doctorPhone,
-
-            password:
-                doctorPassword,
-
-            specialty:
-                specialty,
-
-            availableAppointments:
-                availableTimes
-                    ? availableTimes
-                        .split(",")
-                        .map(
-                            time =>
-                                time.trim()
-                        )
-                    : []
-        };
-
-        try {
-
-            const result =
-                await saveDoctor(
-                    doctor,
-                    token
-                );
-
-            if (
-                result.success
-            ) {
-
-                alert(
-                    result.message
-                );
-
-                closeModal();
-
-                location.reload();
-
-            } else {
-
-                alert(
-                    result.message
-                );
-            }
-
-        } catch (error) {
-
-            console.error(
-                "Add doctor error:",
-                error
-            );
-
-            alert(
-                "Failed to add doctor."
-            );
-        }
+    // 3. DÜZELTME: Alan adı backend entity sınıfındaki 'availableTimes' ismiyle eşitlendi
+    const doctor = {
+        name: doctorName,
+        email: doctorEmail,
+        phone: doctorPhone,
+        password: doctorPassword,
+        specialty: specialty,
+        availableTimes: availableTimes
     };
+
+    // Ön Validasyon: Boş form gönderimini engeller
+    if (!doctorName || !doctorEmail || !doctorPhone || !doctorPassword || !specialty) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    try {
+        const result = await saveDoctor(doctor, token);
+
+        if (result) {
+            alert("Doctor registered successfully!");
+            closeModal();
+            location.reload(); // Listeyi yenilemek için sayfayı tazeler
+        }
+    } catch (error) {
+        console.error("Add doctor error:", error);
+        alert("Failed to add doctor. Hint: Ensure mobile number is exactly 10 digits and email is unique.");
+    }
+};
+
 
 /*
   This script handles the admin dashboard functionality for managing doctors:

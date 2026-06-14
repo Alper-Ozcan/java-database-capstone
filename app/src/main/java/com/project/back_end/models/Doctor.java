@@ -15,6 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -110,10 +111,15 @@ public class Doctor {
     @ElementCollection
     @CollectionTable(
             name = "doctor_available_times",
-            joinColumns = @JoinColumn(name = "doctor_id")
+            joinColumns = @JoinColumn(name = "doctor_id"),
+            uniqueConstraints = @UniqueConstraint(
+                    name = "uk_doctor_available_time", 
+                    columnNames = {"doctor_id", "available_times"} // otomatik eklenen örnek verilerin her açılışta eklenmesini engeller
+            )
     )
     @Column(name = "available_times")
     private List<String> availableTimes = new ArrayList<>();
+
 
 // Constructor(s):
     public Doctor() {

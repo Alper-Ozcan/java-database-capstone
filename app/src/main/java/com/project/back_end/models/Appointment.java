@@ -13,11 +13,18 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
-@Table(name = "appointment")
+@Table(
+    name = "appointment",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_doctor_appointment_time",
+        columnNames = {"doctor_id", "patient_id", "appointmentTime"} // örnek veriler her açılışta eklenemesin
+    )
+)
 public class Appointment {
 
     // @Entity annotation:

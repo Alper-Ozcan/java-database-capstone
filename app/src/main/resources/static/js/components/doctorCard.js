@@ -3,6 +3,7 @@
 import { showBookingOverlay } from "../loggedPatient.js";
 import { deleteDoctor } from "../services/doctorServices.js";
 import { getPatientData } from "../services/patientServices.js";
+import { bookAppointment } from "../services/appointmentRecordService.js";
 
 export function createDoctorCard(doctor) {
 
@@ -18,9 +19,10 @@ export function createDoctorCard(doctor) {
     const doctorName = document.createElement("h3");
     doctorName.textContent = doctor.name;
 
+    // Uzmanlık alanı için hem küçük 'specialty' hem de alternatif 'speciality' alanlarını güvene alıyoruz
     const doctorSpecialization = document.createElement("p");
     doctorSpecialization.textContent =
-        `Specialty: ${doctor.specialization}`;
+        `Specialty: ${doctor.specialty || doctor.speciality || "General Physician"}`;
 
     const doctorEmail = document.createElement("p");
     doctorEmail.textContent =
@@ -28,19 +30,16 @@ export function createDoctorCard(doctor) {
 
     const doctorAvailability = document.createElement("p");
 
-    if (
-        doctor.availableAppointments &&
-        doctor.availableAppointments.length > 0
-    ) {
+    // 🔥 KESİN ÇÖZÜM NOKTASI: 
+    // availableAppointments yerine kesinlikle backend'den gelen 'availableTimes' alanı aranmalıdır.
+    const times = doctor.availableTimes || doctor.availableAppointments;
 
+    if (times && times.length > 0) {
         doctorAvailability.textContent =
-            `Available: ${doctor.availableAppointments.join(", ")}`;
-
+            `Available: ${times.join(", ")}`;
     } else {
-
         doctorAvailability.textContent =
             "No available appointments";
-
     }
 
     doctorInfo.appendChild(doctorName);
@@ -64,13 +63,10 @@ export function createDoctorCard(doctor) {
 
         deleteBtn.addEventListener("click", async () => {
 
-            const token =
-                localStorage.getItem("token");
+            const token = localStorage.getItem("token");
 
             if (!token) {
-
                 alert("Admin session expired.");
-
                 return;
             }
 
@@ -83,25 +79,13 @@ export function createDoctorCard(doctor) {
             }
 
             try {
-
-                await deleteDoctor(
-                    doctor.id,
-                    token
-                );
-
+                await deleteDoctor(doctor.id, token);
                 alert("Doctor deleted successfully.");
-
                 card.remove();
-
             } catch (error) {
-
                 console.error(error);
-
-                alert(
-                    "Failed to delete doctor."
-                );
+                alert("Failed to delete doctor.");
             }
-
         });
 
         cardActions.appendChild(deleteBtn);
@@ -113,15 +97,10 @@ export function createDoctorCard(doctor) {
     else if (role === "patient") {
 
         const bookBtn = document.createElement("button");
-
         bookBtn.textContent = "Book Now";
 
         bookBtn.addEventListener("click", () => {
-
-            alert(
-                "Please login before booking an appointment."
-            );
-
+            alert("Please login before booking an appointment.");
         });
 
         cardActions.appendChild(bookBtn);
@@ -130,44 +109,44 @@ export function createDoctorCard(doctor) {
     // =========================
     // LOGGED PATIENT
     // =========================
+    // doctorCard.js - loggedPatient Bloğu
     else if (role === "loggedPatient") {
-
         const bookBtn = document.createElement("button");
-
         bookBtn.textContent = "Book Now";
 
-        bookBtn.addEventListener("click", async () => {
-
-            const token =
-                localStorage.getItem("token");
+        // 🔥 KESİN ÇÖZÜM 2: Dalgalanma (ripple) efekti koordinatları için fonksiyona tıklama olayı (e) enjekte edildi
+        bookBtn.addEventListener("click", async (e) => {
+            const token = localStorage.getItem("token");
 
             if (!token) {
-
-                window.location.href =
-                    "/pages/patientDashboard.html";
-
+                window.location.href = "/pages/patientDashboard.html";
                 return;
             }
 
             try {
+                // Backend profil tetikleyicimiz çalışıyor
+                const response = await getPatientData(token);
+                
+                if (!response) {
+                    alert("Oturum süreniz dolmuş olabilir. Lütfen tekrar giriş yapın.");
+                    return;
+                }
 
-                const patient =
-                    await getPatientProfile(token);
+                const patient = response.patient || response.data || response;
+                console.log("Aktif hasta verisi overlay'e aktarılıyor:", patient);
 
-                overlay(
-                    doctor,
-                    patient
-                );
+                // 🔥 KESİN ÇÖZÜM 3: İlkel prompt pencereleri kaldırıldı! 
+                // Tıklama olayı (e), doktor ve hasta nesneleri şık takvim penceresine paslanıyor.
+                if (typeof showBookingOverlay === "function") {
+                    showBookingOverlay(e, doctor, patient);
+                } else {
+                    alert(`Randevu ekranı tetikleniyor: Dr. ${doctor.name}`);
+                }
 
             } catch (error) {
-
-                console.error(error);
-
-                alert(
-                    "Unable to retrieve patient information."
-                );
+                console.error("Randevu butonu tıklama hatası:", error);
+                alert("Randevu ekranı yüklenirken bir hata oluştu.");
             }
-
         });
 
         cardActions.appendChild(bookBtn);
@@ -178,6 +157,7 @@ export function createDoctorCard(doctor) {
 
     return card;
 }
+
 
 /*
 Import the overlay function for booking appointments from loggedPatient.js
